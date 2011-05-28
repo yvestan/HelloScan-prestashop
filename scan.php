@@ -10,6 +10,7 @@
 * @author Yves Tannier [grafactory.net]
 * @copyright 2011 Yves Tannier
 * @link http://helloscan.mobi
+* @version 0.1
 * @license MIT Licence
 */
 
