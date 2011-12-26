@@ -10,7 +10,6 @@
 * @author Yves Tannier [grafactory.net]
 * @copyright 2011 Yves Tannier
 * @link http://helloscan.mobi
-* @version 0.1
 * @license MIT Licence
 */
 
@@ -351,7 +350,7 @@ if(!$HS_authKey->check()) {
     // send response and exit
     $HS_responseHandler->sendResponse(array(
         'status' => '401',
-        'response' => 'Bad authorisation key'
+        'result' => 'Bad authorisation key'
     ));
 }
 
@@ -360,7 +359,7 @@ if(!$HS_requestParams->codeExist()) {
     // send response and exit
     $HS_responseHandler->sendResponse(array(
         'status' => '404',
-        'response' => 'Product code unvalaible'
+        'result' => 'Product code unvalaible'
     ));
 }
 
@@ -377,6 +376,6 @@ if(method_exists($HS_check,$HS_requestParams->getAction())) {
     // no action =  reponse and exit
     $HS_responseHandler->sendResponse(array(
         'status' => '404',
-        'response' => 'Action unvailable or not specified'
+        'result' => 'Action unvailable or not specified'
     ));
 }   
