@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+	<name>helloscan</name>
+	<displayName><![CDATA[HelloScan]]></displayName>
+	<version><![CDATA[0.1.0]]></version>
+	<description><![CDATA[Gestion des stocks via des codes barres et l&#039;application HelloScan]]></description>
+	<author><![CDATA[]]></author>
+	<tab><![CDATA[Stocks]]></tab>
+	<is_configurable>1</is_configurable>
+	<need_instance>1</need_instance>
+	<limited_countries></limited_countries>
+</module>
