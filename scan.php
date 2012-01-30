@@ -134,19 +134,20 @@ class HelloScan_AuthKey {
 }
    
 // check product code and perform actions
-class HelloScan_Check {
+class HelloScan_Check extends Module {
 
     // request params
     protected $params = null;
        
     // product fields rturn format json
     private $return_fields = array(
-        'name',
-        'price',
-        'quantity',
-        'id_product',
-        'ean13',
-        'reference',
+        'name' => 'on',
+        'price' => 'on',
+        'quantity' => 'on',
+        'id_product' => 'on',
+        'ean13' => 'on',
+        'reference' => 'on',
+        'location' => 'on',
     );
 
     // debug mode
@@ -206,8 +207,28 @@ class HelloScan_Check {
     public function get() {
 
         if($product = $this->checkProductByCode()) {
+            // get active fields from module conf
+            $active_fields = unserialize(Configuration::get('helloscan_active_fields',array()));
+            if(!empty($active_fields)) {
+                $this->return_fields = $active_fields;
+            }
             foreach($product as $k=>$v) {
-                if(in_array($k, $this->return_fields)) {
+                if(array_key_exists($k, $this->return_fields)) {
+                    // hack for lang product name
+                    if($k=='name' && is_array($v)) {
+                        foreach($v as $lng_product) {
+                            if(!empty($lng_product)) {
+                                $v = $lng_product;
+                                break;
+                            }
+                        }
+                    } elseif(is_array($v)) {
+                        $v = join('<br /><br />', $v);
+                    }
+                    // empty field
+                    if(empty($v)) {
+                        $v = 'unknown';
+                    }
                     $product_tabs[$k] = $v;
                 }
             }
