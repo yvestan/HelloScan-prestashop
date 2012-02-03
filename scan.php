@@ -29,6 +29,9 @@ class HelloScan_RequestParams {
     // action from app
     public $action = null;
 
+    // qty from app
+    public $qty = 1;
+
     // action from app
     public $authkey = null;
 
@@ -80,6 +83,22 @@ class HelloScan_RequestParams {
     }
 
     // }}}
+
+    // {{{ getQty()
+
+    /** get quantity to change stock
+     *
+     */
+    public function getQty() {
+        if(!empty($_GET['qty']) && is_numeric($_GET['qty'])) {
+            return $this->qty = (int)$_GET['qty']; 
+        } else {
+            return $this->qty;
+        }
+    }
+
+    // }}}
+
 
     // {{{ getAuthKey()
 
@@ -256,18 +275,18 @@ class HelloScan_Check extends Module {
     public function add() {
         if($product = $this->checkProductByCode()) {
             $sql = 'UPDATE '._DB_PREFIX_.'product
-                    SET `quantity` = `quantity`+'.intval(1).'
+                    SET `quantity` = `quantity`+'.intval($this->params->getQty()).'
                     WHERE `id_product` = '.$product->id_product;
             $this->setDebug('add SQL', $sql);
             if(Db::getInstance()->Execute($sql)) {
                 return array(
                     'status' => '200',
-                    'result' => ' Quantity updated: add 1'
+                    'result' => ' Quantity updated: add '.$this->params->getQty()
                 );
             } else {
                 return array(
                     'status' => '500',
-                    'result' => 'Error during quantity update: add 1'
+                    'result' => 'Error during quantity update: add '.$this->params->getQty()
                 );
             }
         } else {
@@ -288,17 +307,17 @@ class HelloScan_Check extends Module {
      */
     public function remove() {
         if($product = (array)$this->checkProductByCode()) {
-            $product['cart_quantity'] = 1;
-            $this->setDebug('update Quantity', $product['cart_quantity']);
+            $product['cart_quantity'] = $this->params->getQty();
+            //$this->setDebug('update Quantity', $product['cart_quantity']);
             if(Product::updateQuantity($product)) {
                 return array(
                     'status' => '200',
-                    'result' => 'Quantity updated: remove 1'
+                    'result' => 'Quantity updated: remove '.$this->params->getQty()
                 );
             } else {
                 return array(
                     'status' => '500',
-                    'result' => 'Error during quantity update: remove 1'
+                    'result' => 'Error during quantity update: remove '.$this->params->getQty()
                 );
             }
         } else {
