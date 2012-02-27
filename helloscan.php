@@ -53,8 +53,9 @@ class HelloScan extends Module
 				'name' => array('label' => $this->l('Name *')),
 				'location' => array('label' => $this->l('Location')),
 				//'category' => array('label' => $this->l('Categories (x,y,z...)')),
-				'price_tex' => array('label' => $this->l('Price tax excl.')),
-				'price_tin' => array('label' => $this->l('Price tax incl.')),
+				'price' => array('label' => $this->l('Price')),
+				/*'price_tex' => array('label' => $this->l('Price tax excl.')),
+				'price_tin' => array('label' => $this->l('Price tax incl.')),*/
 				//'id_tax_rules_group' => array('label' => $this->l('Tax rules id')),
 				'wholesale_price' => array('label' => $this->l('Wholesale price')),
 				'on_sale' => array('label' => $this->l('On sale (0/1)')),

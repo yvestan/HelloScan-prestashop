@@ -17,9 +17,6 @@
 include(dirname(__FILE__).'/../../config/config.inc.php');
 include_once(dirname(__FILE__).'/../../init.php');
 
-// debug ?
-define('HELLOSCAN_DEBUG', false);
-
 // get params from helloscan request
 class HelloScan_RequestParams {
 
@@ -28,6 +25,9 @@ class HelloScan_RequestParams {
 
     // action from app
     public $action = null;
+
+    // qty from app
+    public $qty = 1;
 
     // action from app
     public $authkey = null;
@@ -45,8 +45,10 @@ class HelloScan_RequestParams {
      *
      */
     public function getCode() {
+        HelloScan_Utils::setDebug('getCode[before]', $_GET['code']);
         if(!empty($_GET['code']) && is_numeric($_GET['code'])) {
-            return $this->code = (int)$_GET['code'];
+            HelloScan_Utils::setDebug('getCode[after]', trim(htmlspecialchars($_GET['code'])));
+            return $this->code = trim(htmlspecialchars($_GET['code']));
         }
         return false;
     }
@@ -74,12 +76,28 @@ class HelloScan_RequestParams {
      */
     public function getAction() {
         if(!empty($_GET['action']) && in_array($_GET['action'], $this->actions)) {
-            return $this->action = htmlspecialchars($_GET['action']); 
+            return $this->action = trim(htmlspecialchars($_GET['action'])); 
         }
         return false;
     }
 
     // }}}
+
+    // {{{ getQty()
+
+    /** get quantity to change stock
+     *
+     */
+    public function getQty() {
+        if(!empty($_GET['qty']) && is_numeric($_GET['qty'])) {
+            return $this->qty = trim(htmlspecialchars($_GET['qty'])); 
+        } else {
+            return $this->qty;
+        }
+    }
+
+    // }}}
+
 
     // {{{ getAuthKey()
 
@@ -88,7 +106,7 @@ class HelloScan_RequestParams {
      */
     public function getAuthKey() {
         if(!empty($_GET['authkey'])) {
-            return $this->authkey = htmlspecialchars($_GET['authkey']); 
+            return $this->authkey = trim(htmlspecialchars($_GET['authkey'])); 
         }
         return false;
     }
@@ -161,10 +179,13 @@ class HelloScan_Check extends Module {
      */
     public function __construct($params) {
         $this->params = $params;
+        // debug mode
+        if(!empty($_GET['debug_mode'])) {
+            $this->debug = true;
+        }
     }
 
     // }}}
-
 
     // {{{ checkProductByCode()
 
@@ -176,21 +197,24 @@ class HelloScan_Check extends Module {
         // find product by EAN
         $sql = 'SELECT p.`id_product` FROM '._DB_PREFIX_.'product p
                 WHERE p.`ean13`='.pSQL($this->params->getCode()).' ';
+
         $id_product = DB::getInstance()->getValue($sql);
 
-        // debug
-        $this->setDebug('SQL check', $sql);
+        HelloScan_Utils::setDebug('checkProductByCode[SQL]', $sql);
 
         // get product
         if(!empty($id_product)) {
             $product = new Product($id_product);
-            if (!Validate::isLoadedObject($product) || !$product->active) {
+            //if (!Validate::isLoadedObject($product) || !$product->active) {
+            if (!Validate::isLoadedObject($product)) {
+                HelloScan_Utils::setDebug('checkProductByCode[Validate::isLoadedObject]', 'Unable to validate');
                 return false;
             } else {
                 $product->id_product = $id_product;
                 return $product;
             }
         } else {
+            HelloScan_Utils::setDebug('checkProductByCode[id_product]', 'empty id_product after SQL query');
             return false;
         }
 
@@ -207,6 +231,7 @@ class HelloScan_Check extends Module {
     public function get() {
 
         if($product = $this->checkProductByCode()) {
+            HelloScan_Utils::setDebug('get[checkProductByCode]', 'Product find');
             // get active fields from module conf
             $active_fields = unserialize(Configuration::get('helloscan_active_fields',array()));
             if(!empty($active_fields)) {
@@ -214,6 +239,13 @@ class HelloScan_Check extends Module {
             }
             foreach($product as $k=>$v) {
                 if(array_key_exists($k, $this->return_fields)) {
+                    // add sale price
+                    if($k=='price') {
+                        $tax_rate = Tax::getProductTaxRate($product->id_product);
+                        if(!empty($tax_rate)) {
+                            $product_tabs['sale_price'] = round($product->price+($product->price*$tax_rate/100));
+                        }
+                    }
                     // hack for lang product name
                     if($k=='name' && is_array($v)) {
                         foreach($v as $lng_product) {
@@ -238,6 +270,7 @@ class HelloScan_Check extends Module {
                 'data' => $product_tabs,
             );
         } else {
+           HelloScan_Utils::setDebug('get[checkProductByCode]', 'Unable to find product');
            return array(
                 'status' => 404,
                 'result' => 'No product found',
@@ -256,18 +289,18 @@ class HelloScan_Check extends Module {
     public function add() {
         if($product = $this->checkProductByCode()) {
             $sql = 'UPDATE '._DB_PREFIX_.'product
-                    SET `quantity` = `quantity`+'.intval(1).'
+                    SET `quantity` = `quantity`+'.intval($this->params->getQty()).'
                     WHERE `id_product` = '.$product->id_product;
-            $this->setDebug('add SQL', $sql);
+            HelloScan_Utils::setDebug('add[SQL]', $sql);
             if(Db::getInstance()->Execute($sql)) {
                 return array(
                     'status' => '200',
-                    'result' => ' Quantity updated: add 1'
+                    'result' => ' Quantity updated: add '.$this->params->getQty()
                 );
             } else {
                 return array(
                     'status' => '500',
-                    'result' => 'Error during quantity update: add 1'
+                    'result' => 'Error during quantity update: add '.$this->params->getQty()
                 );
             }
         } else {
@@ -288,17 +321,17 @@ class HelloScan_Check extends Module {
      */
     public function remove() {
         if($product = (array)$this->checkProductByCode()) {
-            $product['cart_quantity'] = 1;
-            $this->setDebug('update Quantity', $product['cart_quantity']);
+            $product['cart_quantity'] = $this->params->getQty();
+            HelloScan_Utils::setDebug('remove[quantity]', $product['cart_quantity']);
             if(Product::updateQuantity($product)) {
                 return array(
                     'status' => '200',
-                    'result' => 'Quantity updated: remove 1'
+                    'result' => 'Quantity updated: remove '.$this->params->getQty()
                 );
             } else {
                 return array(
                     'status' => '500',
-                    'result' => 'Error during quantity update: remove 1'
+                    'result' => 'Error during quantity update: remove '.$this->params->getQty()
                 );
             }
         } else {
@@ -323,6 +356,13 @@ class HelloScan_Check extends Module {
 
     // }}}
 
+
+}
+    
+
+// response format and send
+class HelloScan_Utils {
+
     // {{{ setDebug()
 
     /** debug
@@ -330,11 +370,14 @@ class HelloScan_Check extends Module {
      * @param string $key Key
      * @param string $value Value debug
      */
-    public function setDebug($key,$value) {
-        if($this->debug) {
-            echo $key.' : '.$value;
+    static public function setDebug($key,$value) {
+        // debug mode
+        if(!empty($_GET['debug_mode'])) {
+            echo '&raquo; '.$key.' : '.$value.'<br /><br />';
         }
     }
+
+    // }}}
 
 }
 
