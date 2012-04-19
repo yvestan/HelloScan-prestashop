@@ -2,7 +2,7 @@
 <module>
 	<name>helloscan</name>
 	<displayName><![CDATA[HelloScan]]></displayName>
-	<version><![CDATA[0.1.3]]></version>
+	<version><![CDATA[0.1.4]]></version>
 	<description><![CDATA[Gestion des stocks via des codes barres et l&#039;application HelloScan]]></description>
 	<author><![CDATA[]]></author>
 	<tab><![CDATA[Stocks]]></tab>

@@ -100,10 +100,20 @@ class HelloScan extends Module
         }
 
         $actual_authkey = Configuration::get($this->name.'_authkey',NULL);
+
+        if(empty($actual_authkey)) {
+            $actual_authkey = uniqid('HS', true);
+            Configuration::updateValue($this->name.'_authkey', $actual_authkey);
+        }
+
+        if(empty($actual_authkey)) {
+            $this->_html .= '<div style="padding: 10px; text-align:center;color:red;font-weight: bold;font-size:16px;">Vous devez préciser une clé d\'authentification</div>';
+        }
+
         $this->_html .= '
         <form action="'.$_SERVER['REQUEST_URI'].'" method="post">';
         if (Tools::isSubmit('submit')) {
-            echo '<div style="color:green;font-weight:bold;" class="margin-form">Configuration enregistrée</div>';
+            $this->_html .= '<h2 style="color:green;font-weight:bold; text-align:center;">Configuration enregistrée</h2>';
         }
         $this->_html .='
                 <label>'.$this->l('Clé HelloScan').'</label>
@@ -117,6 +127,28 @@ class HelloScan extends Module
                     <input type="submit" name="submit" value="'.$this->l('OK').'" class="button" />
                 </div>
         </form>';
+
+        // le code barre pour android
+        if(!empty($actual_authkey)) {
+
+            // url prestashop
+            $hs_url_prestashop = Tools::getShopDomain('true');
+            $hs_url_prestashop_ssl = Tools::getShopDomainSsl('true');
+
+            $hs_path = $_SERVER['SCRIPT_NAME'];
+            $hs_module_path = str_replace(__PS_BASE_URI__, '', $hs_path);
+            $hs_module_path = str_replace('coucou/index.php', '', $hs_module_path);
+
+            $hs_url_module = $hs_url_prestashop.__PS_BASE_URI__.$hs_module_path;
+            $hs_url_xml_conf = $hs_url_module.'modules/helloscan/hs.php?authkey='.$actual_authkey;
+
+            $this->_html .= '<div style="text-align:center;">
+                            <h2>QRCode de configuration depuis l\'App Android</h2>
+                            <div><img src="https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl='.$hs_url_xml_conf.'&choe=UTF-8" alt="QR Code" /></div>
+                            </div>';
+
+        }
+
     }
 
 }

@@ -187,6 +187,55 @@ class HelloScan_Check extends Module {
 
     // }}}
 
+    // {{{ getAttribute()
+
+    /**
+     * @return array of Groups/Attribute
+     * param integer $id_product_attribute
+     * param integer $id_lang
+     */
+    public function getAttribute($id_product_attribute, $id_lang = null) {         
+        $sql = '
+        SELECT * 
+        FROM `'._DB_PREFIX_.'product_attribute`  pa
+        LEFT JOIN `'._DB_PREFIX_.'product_lang` pl ON pa.`id_product`=pl.`id_product` 
+        WHERE pa.`id_product_attribute`='.intval($id_product_attribute);
+
+        // langue
+        if(!empty($id_lang)) {
+            $sql .= ' AND `id_lang` = '.intval($id_lang);
+        }
+
+        return DB::getInstance()->ExecuteS($sql);
+
+    }
+
+    // }}}
+
+    // {{{ getAttributeDescription()
+
+    /**
+     * @return array of Groups/Attribute available for a designed product
+     * param integer $id_product_attribute
+     * param integer $id_lang
+     */
+    public function getAttributeDescription($id_product_attribute, $id_lang = null) {         
+
+        $sql = '
+            SELECT * FROM
+            `'._DB_PREFIX_.'product_attribute_combination`  pac
+            JOIN  `'._DB_PREFIX_.'attribute_lang` al ON pac.`id_attribute`=al.`id_attribute`
+            WHERE id_product_attribute='.intval($id_product_attribute);
+
+        // langue
+        if(!empty($id_lang)) {
+            $sql .= ' AND al.`id_lang` = '.intval($id_lang).' ';
+        }
+        return DB::getInstance()->ExecuteS($sql);
+    }
+
+    // }}}
+
     // {{{ checkProductByCode()
 
     /** check if code is associate with product
@@ -200,17 +249,37 @@ class HelloScan_Check extends Module {
 
         $id_product = DB::getInstance()->getValue($sql);
 
+        // find product_attribute
+        if(empty($id_product)) {
+            $sql = 'SELECT pa.`id_product_attribute`, pa.`id_product` FROM '._DB_PREFIX_.'product_attribute pa
+                    WHERE pa.`ean13`='.pSQL($this->params->getCode()).' ';
+
+            $result = DB::getInstance()->getRow($sql);
+
+            $id_product = $result['id_product'];
+            $id_product_attribute = $result['id_product_attribute'];
+
+            HelloScan_Utils::setDebug('checkProductByCode[SQL_attribute]', $sql);
+        }
+
         HelloScan_Utils::setDebug('checkProductByCode[SQL]', $sql);
 
         // get product
         if(!empty($id_product)) {
             $product = new Product($id_product);
-            //if (!Validate::isLoadedObject($product) || !$product->active) {
+           //if (!Validate::isLoadedObject($product) || !$product->active) {
             if (!Validate::isLoadedObject($product)) {
                 HelloScan_Utils::setDebug('checkProductByCode[Validate::isLoadedObject]', 'Unable to validate');
                 return false;
             } else {
                 $product->id_product = $id_product;
+                if(!empty($id_product_attribute)) {
+                    $product_attribute = $this->getAttribute($id_product_attribute);
+                    $product_attribute['id_product'] = $id_product;
+                    $product_attribute['id_product_attribute'] = $id_product;
+                    // cast
+                    $product = (object)$product_attribute[0];
+                }
                 return $product;
             }
         } else {
@@ -231,14 +300,30 @@ class HelloScan_Check extends Module {
     public function get() {
 
         if($product = $this->checkProductByCode()) {
+
             HelloScan_Utils::setDebug('get[checkProductByCode]', 'Product find');
+
             // get active fields from module conf
             $active_fields = unserialize(Configuration::get('helloscan_active_fields',array()));
             if(!empty($active_fields)) {
                 $this->return_fields = $active_fields;
             }
+
             foreach($product as $k=>$v) {
+
+                // add attribute description
+                if(isset($product->id_product_attribute)) {
+                    $attributes = $this->getAttributeDescription($product->id_product_attribute);
+                    // take the first lang on array
+                    foreach($attributes as $a) {
+                        if(empty($product_tabs['attribute_'.$a['id_attribute']])) {
+                            $product_tabs['attribute_'.$a['id_attribute']] = $a['name'];
+                        }
+                    }
+                }
+
                 if(array_key_exists($k, $this->return_fields)) {
+
                     // add sale price
                     if($k=='price') {
                         $tax_rate = Tax::getProductTaxRate($product->id_product);
@@ -246,6 +331,7 @@ class HelloScan_Check extends Module {
                             $product_tabs['sale_price'] = round($product->price+($product->price*$tax_rate/100));
                         }
                     }
+
                     // hack for lang product name
                     if($k=='name' && is_array($v)) {
                         foreach($v as $lng_product) {
@@ -257,10 +343,12 @@ class HelloScan_Check extends Module {
                     } elseif(is_array($v)) {
                         $v = join('<br /><br />', $v);
                     }
+
                     // empty field
                     if(empty($v)) {
                         $v = 'unknown';
                     }
+
                     $product_tabs[$k] = $v;
                 }
             }
@@ -288,11 +376,13 @@ class HelloScan_Check extends Module {
      */
     public function add() {
         if($product = $this->checkProductByCode()) {
-            $sql = 'UPDATE '._DB_PREFIX_.'product
-                    SET `quantity` = `quantity`+'.intval($this->params->getQty()).'
-                    WHERE `id_product` = '.$product->id_product;
-            HelloScan_Utils::setDebug('add[SQL]', $sql);
-            if(Db::getInstance()->Execute($sql)) {
+            if(empty($product->id_product_attribute)) {
+                $id_product_attribute = null;
+            } else {
+                $id_product_attribute = $product->id_product_attribute;
+            }
+		    $product = new Product($product->id_product);
+            if($product->addStockMvt(intval($this->params->getQty()), 1, $id_product_attribute)) {
                 return array(
                     'status' => '200',
                     'result' => ' Quantity updated: add '.$this->params->getQty()
@@ -320,9 +410,15 @@ class HelloScan_Check extends Module {
      * @return array
      */
     public function remove() {
-        if($product = (array)$this->checkProductByCode()) {
+        if($product = $this->checkProductByCode()) {
+             if(!empty($product->id_product_attribute)) {
+                $id_product_attribute = $product->id_product_attribute;
+            }
+            $product = (array)$product;
             $product['cart_quantity'] = $this->params->getQty();
-            HelloScan_Utils::setDebug('remove[quantity]', $product['cart_quantity']);
+            if(!empty($id_product_attribute)) {
+                $product['id_product_attribute'] = $id_product_attribute;
+            }
             if(Product::updateQuantity($product)) {
                 return array(
                     'status' => '200',

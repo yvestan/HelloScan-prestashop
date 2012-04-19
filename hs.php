@@ -36,25 +36,27 @@ $hs_path = $_SERVER['SCRIPT_NAME'];
 $hs_module_path = str_replace(__PS_BASE_URI__, '', $hs_path);
 $hs_module_path = str_replace('hs.php', '', $hs_module_path);
 
-$hs_url_module = $hs_url_prestashop.'/'.$hs_module_path;
+$hs_url_module = $hs_url_prestashop.__PS_BASE_URI__.$hs_module_path;
 
 header ('Content-Type:text/xml'); 
 ?> 
 <helloscan>
     <button>
-        <label value="Scanner"></label>
+        <label value="Scanne"></label>
         <url value="<?php echo $hs_url_module; ?>scan.php?authkey=<?php echo $hs_authkey; ?>&amp;code=&lt;id&gt;&amp;action=get"></url>
         <action value="true"></action>
-        <color value="buttonRed"></color>
+        <color value="buttonBlue"></color>
     </button>
     <button>
-        <label value="Incrémenter"></label>
+        <label value="Incrémente"></label>
         <url value="<?php echo $hs_url_module; ?>scan.php?authkey=<?php echo $hs_authkey; ?>&amp;code=&lt;id&gt;&amp;action=add"></url>
         <action value="false"></action>
+        <color value="buttonGreen"></color>
     </button>
     <button>
-        <label value="Décrémenter"></label>
+        <label value="Décrémente"></label>
         <url value="<?php echo $hs_url_module; ?>scan.php?authkey=<?php echo $hs_authkey; ?>&amp;code=&lt;id&gt;&amp;action=remove"></url>
         <action value="false"></action>
+        <color value="buttonRed"></color>
     </button>
 </helloscan>
