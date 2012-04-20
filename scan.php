@@ -326,9 +326,11 @@ class HelloScan_Check extends Module {
 
                     // add sale price
                     if($k=='price') {
-                        $tax_rate = Tax::getProductTaxRate($product->id_product);
-                        if(!empty($tax_rate)) {
-                            $product_tabs['sale_price'] = round($product->price+($product->price*$tax_rate/100));
+                        if(method_exists('Tax','getProductTaxRate')) {
+                            $tax_rate = Tax::getProductTaxRate($product->id_product);
+                            if(!empty($tax_rate)) {
+                                $product_tabs['sale_price'] = round($product->price+($product->price*$tax_rate/100));
+                            }
                         }
                     }
 
@@ -376,13 +378,13 @@ class HelloScan_Check extends Module {
      */
     public function add() {
         if($product = $this->checkProductByCode()) {
-            if(empty($product->id_product_attribute)) {
-                $id_product_attribute = null;
-            } else {
-                $id_product_attribute = $product->id_product_attribute;
+            $product->id = $product->id_product;
+            // rename variable why ?
+            $product->product_id = $product->id_product;
+            if(!empty($product->id_product_attribute)) {
+                $product->product_attribute_id = $product->id_product_attribute;
             }
-		    $product = new Product($product->id_product);
-            if($product->addStockMvt(intval($this->params->getQty()), 1, $id_product_attribute)) {
+            if(Product::reinjectQuantities($product, intval($this->params->getQty()))) {
                 return array(
                     'status' => '200',
                     'result' => ' Quantity updated: add '.$this->params->getQty()
@@ -411,7 +413,7 @@ class HelloScan_Check extends Module {
      */
     public function remove() {
         if($product = $this->checkProductByCode()) {
-             if(!empty($product->id_product_attribute)) {
+            if(!empty($product->id_product_attribute)) {
                 $id_product_attribute = $product->id_product_attribute;
             }
             $product = (array)$product;

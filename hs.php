@@ -29,14 +29,16 @@ if(empty($_GET['authkey']) || Configuration::get('helloscan_authkey',NULL)!=$_GE
 }
 
 // url prestashop
-$hs_url_prestashop = Tools::getShopDomain('true');
-$hs_url_prestashop_ssl = Tools::getShopDomainSsl('true');
+if(method_exists('Tools','getHttpHost')) {
+    $hs_url_prestashop = Tools::getHttpHost(true);
+} elseif(method_exists('Tools','getShopDomain')) {
+    $hs_url_prestashop = Tools::getShopDomain('true');
+    $hs_url_prestashop_ssl = Tools::getShopDomainSsl('true');
+} else {
+    $hs_url_prestashop = 'http://'.$_SERVER['HTTP_HOST'];
+}
 
-$hs_path = $_SERVER['SCRIPT_NAME'];
-$hs_module_path = str_replace(__PS_BASE_URI__, '', $hs_path);
-$hs_module_path = str_replace('hs.php', '', $hs_module_path);
-
-$hs_url_module = $hs_url_prestashop.__PS_BASE_URI__.$hs_module_path;
+$hs_url_module = $hs_url_prestashop.__PS_BASE_URI__.'modules/helloscan/';
 
 header ('Content-Type:text/xml'); 
 ?> 
