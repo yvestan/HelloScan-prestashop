@@ -243,6 +243,9 @@ class HelloScan_Check extends Module {
      */
     public function checkProductByCode() {
 
+        // langue get from config
+        $id_lang = Configuration::get('helloscan_id_lang');
+
         // find product by EAN
         $sql = 'SELECT p.`id_product` FROM '._DB_PREFIX_.'product p
                 WHERE p.`ean13`='.pSQL($this->params->getCode()).' ';
@@ -266,7 +269,7 @@ class HelloScan_Check extends Module {
 
         // get product
         if(!empty($id_product)) {
-            $product = new Product($id_product);
+            $product = new Product($id_product,false,$id_lang);
            //if (!Validate::isLoadedObject($product) || !$product->active) {
             if (!Validate::isLoadedObject($product)) {
                 HelloScan_Utils::setDebug('checkProductByCode[Validate::isLoadedObject]', 'Unable to validate');
@@ -274,7 +277,7 @@ class HelloScan_Check extends Module {
             } else {
                 $product->id_product = $id_product;
                 if(!empty($id_product_attribute)) {
-                    $product_attribute = $this->getAttribute($id_product_attribute);
+                    $product_attribute = $this->getAttribute($id_product_attribute,$id_lang);
                     $product_attribute['id_product'] = $id_product;
                     $product_attribute['id_product_attribute'] = $id_product;
                     // cast
@@ -308,12 +311,17 @@ class HelloScan_Check extends Module {
             if(!empty($active_fields)) {
                 $this->return_fields = $active_fields;
             }
+            /*print_r($product);
+            exit;*/
 
             foreach($product as $k=>$v) {
 
                 // add attribute description
                 if(isset($product->id_product_attribute)) {
-                    $attributes = $this->getAttributeDescription($product->id_product_attribute);
+                    // langue get from config
+                    $id_lang = Configuration::get('helloscan_id_lang');
+                    // with langue
+                    $attributes = $this->getAttributeDescription($product->id_product_attribute,$id_lang);
                     // take the first lang on array
                     foreach($attributes as $a) {
                         if(empty($product_tabs['attribute_'.$a['id_attribute']])) {

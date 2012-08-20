@@ -2,8 +2,8 @@
 <module>
 	<name>helloscan</name>
 	<displayName><![CDATA[HelloScan]]></displayName>
-	<version><![CDATA[0.1.4]]></version>
-	<description><![CDATA[Gestion des stocks via des codes barres et l&#039;application HelloScan]]></description>
+	<version><![CDATA[0.1.5]]></version>
+	<description><![CDATA[Product inventory management via barcode and HelloScan smartphone application]]></description>
 	<author><![CDATA[]]></author>
 	<tab><![CDATA[Stocks]]></tab>
 	<is_configurable>1</is_configurable>

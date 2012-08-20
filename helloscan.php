@@ -10,7 +10,7 @@
 * @author Yves Tannier [grafactory.net]
 * @copyright 2011 Yves Tannier
 * @link http://helloscan.mobi
-* @version 0.1
+* @version 0.1.2
 * @license MIT Licence
 */
 
@@ -25,19 +25,25 @@ class HelloScan extends Module
         parent::__construct();
         
         $this->tab = 'Stocks';
-        $this->version = '0.1.0';
+        $this->version = '0.1.5';
         $this->displayName = $this->l('HelloScan');
-        $this->description = $this->l('Gestion des stocks via des codes barres et l\'application HelloScan');
+        //$this->description = $this->l('Gestion des stocks via des codes barres et l\'application HelloScan');
+        $this->description = $this->l('Product inventory management via barcode and HelloScan smartphone application');
 
     }
 
+    // update
     public function getContent()
     {
         if (Tools::isSubmit('submit')) {
+            // authkey helloscan
             Configuration::updateValue($this->name.'_authkey', Tools::getValue($this->name.'_authkey'));
+            // return fields
             if(!empty($_POST[$this->name.'_active_fields']) && is_array($_POST[$this->name.'_active_fields'])) {
                 Configuration::updateValue($this->name.'_active_fields', serialize($_POST[$this->name.'_active_fields']));
             }
+            // default language
+            Configuration::updateValue($this->name.'_id_lang', Tools::getValue($this->name.'_id_lang'));
         }
 
         $this->_displayForm();
@@ -47,6 +53,7 @@ class HelloScan extends Module
 
     private function _displayForm()
     {
+
         $available_fields = array(
             'id' => array('label' => $this->l('ID')),
             'active' => array('label' => $this->l('Active (0/1)')),
@@ -89,6 +96,7 @@ class HelloScan extends Module
             'reduction_to' => array('label' => $this->l('Discount to (yyyy-mm-dd)')),
         );
 
+        // returned fields
         $active_fields = unserialize(Configuration::get($this->name.'_active_fields', NULL));
 
         foreach($available_fields as $k=>$v) {
@@ -101,6 +109,7 @@ class HelloScan extends Module
             $html_checkbox[$k] .= ' />&nbsp;'.$v['label'];
         }
 
+        // helloscan authkey
         $actual_authkey = Configuration::get($this->name.'_authkey',NULL);
 
         if(empty($actual_authkey)) {
@@ -109,21 +118,46 @@ class HelloScan extends Module
         }
 
         if(empty($actual_authkey)) {
-            $this->_html .= '<div style="padding: 10px; text-align:center;color:red;font-weight: bold;font-size:16px;">Vous devez préciser une clé d\'authentification</div>';
+            $this->_html .= '<div style="padding: 10px; text-align:center;color:red;font-weight: bold;font-size:16px;">'.$this->l('You must fill the authentication key').'</div>';
         }
-
+	
         $this->_html .= '
         <form action="'.$_SERVER['REQUEST_URI'].'" method="post">';
         if (Tools::isSubmit('submit')) {
-            $this->_html .= '<h2 style="color:green;font-weight:bold; text-align:center;">Configuration enregistrée</h2>';
+            $this->_html .= '<h2 style="color:green;font-weight:bold; text-align:center;">'.$this->l('Configuration saved').'</h2>';
         }
         $this->_html .='
-                <label>'.$this->l('Clé HelloScan').'</label>
+                <label>'.$this->l('HelloScan authentication key').'</label>
                 <div class="margin-form">
-                    <input type="text" name="'.$this->name.'_authkey" value="'.$actual_authkey.'" /> <em>Clé d\'authentification de l\'App HelloScan</em>
-                </div>
-                <div class="margin-form">
-                    <h4 style="color:black;">Les champs à activer</h4>'.join('<br />', $html_checkbox).'</h4>
+                    <input type="text" name="'.$this->name.'_authkey" value="'.$actual_authkey.'" /> <em>'.$this->l('Authentication key for HelloScan App. Use some big authentication key for more security').'</em>
+                </div>';
+
+        // language
+
+        $actual_id_lang = Configuration::get($this->name.'_id_lang',NULL);
+
+        if(empty($actual_id_lang)) {
+            $actual_id_lang = PS_LANG_DEFAULT;
+            Configuration::updateValue($this->name.'_id_lang', $actual_id_lang);
+        }
+
+	    $languages_list = Language::getlanguages(false);
+        $this->_html .= '<label>'.$this->l('Default language').'</label>
+                        <div class="margin-form">
+                            <select id="helloscan_id_lang" name="helloscan_id_lang">';
+
+        foreach($languages_list as $k=>$v) {
+            $this->_html .= '<option value="'.$v['id_lang'].'"';
+            if($v['id_lang']==$actual_id_lang) {
+                $this->_html .= ' selected="selected"';
+            }
+            $this->_html .= '>'.$v['name'].'</option>';
+        }
+        $this->_html .= '</select> <em>'.$this->l('Multilingual website').'</em>
+                        </div>';
+
+        $this->_html .= '<div class="margin-form">
+                    <h4 style="color:black;">'.$this->l('Fields returned by Application').'</h4>'.join('<br />', $html_checkbox).'</h4>
                 </div>
                 <div class="margin-form">
                     <input type="submit" name="submit" value="'.$this->l('OK').'" class="button" />
@@ -146,7 +180,7 @@ class HelloScan extends Module
             $hs_url_xml_conf = $hs_url_prestashop.__PS_BASE_URI__.'modules/helloscan/hs.php?authkey='.$actual_authkey;
 
             $this->_html .= '<div style="text-align:center;">
-                            <h2>QRCode de configuration depuis l\'App Android</h2>
+                            <h2>'.$this->l('QRCode to configure Android App').'</h2>
                             <div><img src="https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl='.$hs_url_xml_conf.'&choe=UTF-8" alt="QR Code" /></div>
                             </div>';
 
