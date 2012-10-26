@@ -75,7 +75,9 @@ class HelloScan_RequestParams {
      *
      */
     public function getAction() {
+        HelloScan_Utils::setDebug('getAction[before]', $_GET['action']);
         if(!empty($_GET['action']) && in_array($_GET['action'], $this->actions)) {
+            HelloScan_Utils::setDebug('getAction[after]', trim(htmlspecialchars($_GET['action'])));
             return $this->action = trim(htmlspecialchars($_GET['action'])); 
         }
         return false;
@@ -89,7 +91,9 @@ class HelloScan_RequestParams {
      *
      */
     public function getQty() {
+        HelloScan_Utils::setDebug('getQty[before]', $_GET['qty']);
         if(!empty($_GET['qty']) && is_numeric($_GET['qty'])) {
+            HelloScan_Utils::setDebug('getQty[after]', trim(htmlspecialchars($_GET['qty'])));
             return $this->qty = trim(htmlspecialchars($_GET['qty'])); 
         } else {
             return $this->qty;
@@ -105,7 +109,9 @@ class HelloScan_RequestParams {
      *
      */
     public function getAuthKey() {
+        HelloScan_Utils::setDebug('getAuthKey[before]', $_GET['authkey']);
         if(!empty($_GET['authkey'])) {
+            HelloScan_Utils::setDebug('getAuthKey[after]', trim(htmlspecialchars($_GET['authkey'])));
             return $this->authkey = trim(htmlspecialchars($_GET['authkey'])); 
         }
         return false;
@@ -135,7 +141,7 @@ class HelloScan_AuthKey {
 
     // {{{ check()
 
-    /** auth key / compare with saved authkey TODO
+    /** auth key / compare with saved authkey
      *
      */
     public function check() {
@@ -157,7 +163,7 @@ class HelloScan_Check extends Module {
     // request params
     protected $params = null;
        
-    // product fields rturn format json
+    // product default fields returned in json format
     private $return_fields = array(
         'name' => 'on',
         'price' => 'on',
@@ -201,10 +207,14 @@ class HelloScan_Check extends Module {
         LEFT JOIN `'._DB_PREFIX_.'product_lang` pl ON pa.`id_product`=pl.`id_product` 
         WHERE pa.`id_product_attribute`='.intval($id_product_attribute);
 
+        HelloScan_Utils::setDebug('getAttribute[sql]', $sql);
+
         // langue
         if(!empty($id_lang)) {
             $sql .= ' AND `id_lang` = '.intval($id_lang);
         }
+
+        HelloScan_Utils::setDebug('getAttribute[sql_with_lang]', $sql);
 
         return DB::getInstance()->ExecuteS($sql);
 
@@ -227,10 +237,15 @@ class HelloScan_Check extends Module {
             JOIN  `'._DB_PREFIX_.'attribute_lang` al ON pac.`id_attribute`=al.`id_attribute`
             WHERE id_product_attribute='.intval($id_product_attribute);
 
+        HelloScan_Utils::setDebug('getAttributeDescription[sql]', $sql);
+
         // langue
         if(!empty($id_lang)) {
             $sql .= ' AND al.`id_lang` = '.intval($id_lang).' ';
         }
+
+        HelloScan_Utils::setDebug('getAttributeDescription[sql_with_lang]', $sql);
+
         return DB::getInstance()->ExecuteS($sql);
     }
 
@@ -311,8 +326,6 @@ class HelloScan_Check extends Module {
             if(!empty($active_fields)) {
                 $this->return_fields = $active_fields;
             }
-            /*print_r($product);
-            exit;*/
 
             foreach($product as $k=>$v) {
 
@@ -354,6 +367,26 @@ class HelloScan_Check extends Module {
                         $v = join('<br /><br />', $v);
                     }
 
+                    // quantity
+                    if($k=='quantity') {
+	                    $v = StockAvailable::getQuantityAvailableByProduct($product->id_product, $product->id_product_attribute);
+                    }
+
+                    //find locations and warehouse
+                    if($k=='location') {
+	                    $warehouses = Warehouse::getProductWarehouseList($product->id_product, $product->id_product_attribute);
+                        if(!empty($warehouses)) {
+                            foreach($warehouses as $kw=>$vw) {
+                                $product_tabs['location_'.$kw] = $vw['name'];
+	                            $location = Warehouse::getProductLocation($product->id_product, $product->id_product_attribute, $vw['id_warehouse']);
+                                if(!empty($location)) {
+                                    $product_tabs['location_'.$kw] .= ' / '.$location;
+                                }
+                            }
+                            continue;
+                        }
+                    }
+
                     // empty field
                     if(empty($v)) {
                         $v = 'unknown';
@@ -384,32 +417,7 @@ class HelloScan_Check extends Module {
      *
      * @return array
      */
-    public function add() {
-        if($product = $this->checkProductByCode()) {
-            $product->id = $product->id_product;
-            // rename variable why ?
-            $product->product_id = $product->id_product;
-            if(!empty($product->id_product_attribute)) {
-                $product->product_attribute_id = $product->id_product_attribute;
-            }
-            if(Product::reinjectQuantities($product, intval($this->params->getQty()))) {
-                return array(
-                    'status' => '200',
-                    'result' => ' Quantity updated: add '.$this->params->getQty()
-                );
-            } else {
-                return array(
-                    'status' => '500',
-                    'result' => 'Error during quantity update: add '.$this->params->getQty()
-                );
-            }
-        } else {
-           return array(
-                'status' => 404,
-                'result' => 'No product found to add quantity',
-           );
-        }
-    }
+    public function add() { return $this->updateQuantity('add'); }
 
     // }}}
 
@@ -419,38 +427,46 @@ class HelloScan_Check extends Module {
      *
      * @return array
      */
-    public function remove() {
+    public function remove() { return $this->updateQuantity('remove'); }
+
+    // }}}
+
+    // {{{ updateQuantity()
+
+    /** add or remove quantity form stock
+     *
+     * @return array
+     * @param string $action add or remove 
+     */
+    public function updateQuantity($action) {
         if($product = $this->checkProductByCode()) {
-            if(!empty($product->id_product_attribute)) {
-                $id_product_attribute = $product->id_product_attribute;
+            if($action=='remove') {
+                $qty = intval(-$this->params->getQty());
+            } else {
+                $qty = intval($this->params->getQty());
             }
-            $product = (array)$product;
-            $product['cart_quantity'] = $this->params->getQty();
-            if(!empty($id_product_attribute)) {
-                $product['id_product_attribute'] = $id_product_attribute;
-            }
-            if(Product::updateQuantity($product)) {
+            if(StockAvailable::updateQuantity($product->id_product, $product->id_product_attribute, $qty)!==false) {
                 return array(
                     'status' => '200',
-                    'result' => 'Quantity updated: remove '.$this->params->getQty()
+                    'result' => ' Quantity updated: '.$action.' '.$this->params->getQty()
                 );
             } else {
                 return array(
                     'status' => '500',
-                    'result' => 'Error during quantity update: remove '.$this->params->getQty()
+                    'result' => 'Error during quantity update: '.$action.' '.$this->params->getQty()
                 );
             }
         } else {
            return array(
                 'status' => 404,
-                'result' => 'No product found to remove quantity',
+                'result' => 'No product found to '.$action.' quantity',
            );
         }
     }
 
     // }}}
 
-    // {{{ excute()
+    // {{{ execute()
 
     /** perform action and get result array
      *
