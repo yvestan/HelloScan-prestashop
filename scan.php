@@ -158,7 +158,7 @@ class HelloScan_Check extends Module {
     protected $params = null;
 
     // field to find product
-    public $search_field = 'reference';
+    public $search_field = 'ean13';
        
     // product fields rturn format json
     private $return_fields = array(
