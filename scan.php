@@ -353,7 +353,7 @@ class HelloScan_Check extends Module {
                         if(method_exists('Tax','getProductTaxRate')) {
                             $tax_rate = Tax::getProductTaxRate($product->id_product);
                             if(!empty($tax_rate)) {
-                                $product_tabs['sale_price'] = round($product->price+($product->price*$tax_rate/100));
+                                $product_tabs['sale_price'] = round(floatval($product->price+($product->price*$tax_rate/100)), 2);
                             }
                         }
                     }
