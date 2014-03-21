@@ -49,9 +49,9 @@ class HelloScan_RequestParams {
      */
     public function getCode() {
         HelloScan_Utils::setDebug('getCode[before]', $_GET['code']);
-        if(!empty($_GET['code']) && is_numeric($_GET['code'])) {
-            HelloScan_Utils::setDebug('getCode[after]', trim(htmlspecialchars($_GET['code'])));
-            return $this->code = trim(htmlspecialchars($_GET['code']));
+        if(!empty($_GET['code'])) {
+            HelloScan_Utils::setDebug('getCode[after]', trim(htmlspecialchars(strip_tags($_GET['code']))));
+            return $this->code = trim(htmlspecialchars(strip_tags($_GET['code'])));
         }
         return false;
     }
@@ -165,6 +165,9 @@ class HelloScan_Check extends Module {
 
     // request params
     protected $params = null;
+
+    // field to find product
+    public $search_field = 'ean13';
        
     // product default fields returned in json format
     private $return_fields = array(
@@ -266,14 +269,14 @@ class HelloScan_Check extends Module {
 
         // find product by EAN
         $sql = 'SELECT p.`id_product` FROM '._DB_PREFIX_.'product p
-                WHERE p.`ean13`='.pSQL($this->params->getCode()).' ';
+                WHERE p.`'.$this->search_field.'`=\''.pSQL($this->params->getCode()).'\' ';
 
         $id_product = DB::getInstance()->getValue($sql);
 
         // find product_attribute
         if(empty($id_product)) {
             $sql = 'SELECT pa.`id_product_attribute`, pa.`id_product` FROM '._DB_PREFIX_.'product_attribute pa
-                    WHERE pa.`ean13`='.pSQL($this->params->getCode()).' ';
+                    WHERE pa.`'.$this->search_field.'`=\''.pSQL($this->params->getCode()).'\' ';
 
             $result = DB::getInstance()->getRow($sql);
 
@@ -353,7 +356,7 @@ class HelloScan_Check extends Module {
                         if(method_exists('Tax','getProductTaxRate')) {
                             $tax_rate = Tax::getProductTaxRate($product->id_product);
                             if(!empty($tax_rate)) {
-                                $product_tabs['sale_price'] = round($product->price+($product->price*$tax_rate/100));
+                                $product_tabs['sale_price'] = round(floatval($product->price+($product->price*$tax_rate/100)), 2);
                             }
                         }
                     }
