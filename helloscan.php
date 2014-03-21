@@ -65,6 +65,7 @@ class HelloScan extends Module
             'price_tin' => array('label' => $this->l('Price tax incl.')),*/
             //'id_tax_rules_group' => array('label' => $this->l('Tax rules id')),
             'wholesale_price' => array('label' => $this->l('Wholesale price')),
+            'unit_price' => array('label' => $this->l('Unit price without tax:')),
             'on_sale' => array('label' => $this->l('On sale (0/1)')),
             'reference' => array('label' => $this->l('Reference #')),
             //'supplier_reference' => array('label' => $this->l('Supplier reference #')),

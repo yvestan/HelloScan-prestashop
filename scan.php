@@ -286,6 +286,13 @@ class HelloScan_Check extends Module {
                     // cast
                     $product = (object)$product_attribute[0];
                 }
+                // add unit_price
+                if(!empty($product->price) && !empty($product->unit_price_ratio)) {
+                    $product->unit_price = ($product->price/$product->unit_price_ratio);
+                    if(!empty($product->unity)) {
+                        $product->unit_price .= ' /'.$product->unity;
+                    }
+                }
                 return $product;
             }
         } else {
