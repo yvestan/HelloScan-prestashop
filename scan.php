@@ -17,6 +17,9 @@
 include(dirname(__FILE__).'/../../config/config.inc.php');
 include_once(dirname(__FILE__).'/../../init.php');
 
+// debug ?
+define('HELLOSCAN_DEBUG', false);
+
 // get params from helloscan request
 class HelloScan_RequestParams {
 
@@ -344,6 +347,8 @@ class HelloScan_Check extends Module {
                             $product_tabs['attribute_'.$a['id_attribute']] = $a['name'];
                         }
                     }
+                } else {
+                    $product->id_product_attribute = null;
                 }
 
                 if(array_key_exists($k, $this->return_fields)) {
