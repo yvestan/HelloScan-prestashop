@@ -453,6 +453,9 @@ class HelloScan_Check extends Module {
             } else {
                 $qty = intval($this->params->getQty());
             }
+            if(!isset($product->id_product_attribute)) {
+                $product->id_product_attribute = null;
+            }
             if(StockAvailable::updateQuantity($product->id_product, $product->id_product_attribute, $qty)!==false) {
                 return array(
                     'status' => '200',
