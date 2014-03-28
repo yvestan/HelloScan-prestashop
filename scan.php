@@ -12,6 +12,10 @@
 * @link http://helloscan.mobi
 * @license MIT Licence
 */
+  error_reporting(E_ALL);//
+    ini_set("display_errors",1);
+      ini_set("log_errors",1);
+
 
 // config & init PrestaShop
 include(dirname(__FILE__).'/../../config/config.inc.php');
@@ -19,6 +23,9 @@ include_once(dirname(__FILE__).'/../../init.php');
 
 // debug ?
 define('HELLOSCAN_DEBUG', false);
+  error_reporting(E_ALL);//
+    ini_set("display_errors",1);
+      ini_set("log_errors",1);
 
 // get params from helloscan request
 class HelloScan_RequestParams {
@@ -78,7 +85,11 @@ class HelloScan_RequestParams {
      *
      */
     public function getAction() {
-        HelloScan_Utils::setDebug('getAction[before]', $_GET['action']);
+        if(isset($_GET['action'])) {
+            HelloScan_Utils::setDebug('getAction[before]', $_GET['action']);
+        } else {
+            HelloScan_Utils::setDebug('getAction[before]', 'no');
+        }
         if(!empty($_GET['action']) && in_array($_GET['action'], $this->actions)) {
             HelloScan_Utils::setDebug('getAction[after]', trim(htmlspecialchars($_GET['action'])));
             return $this->action = trim(htmlspecialchars($_GET['action'])); 
@@ -94,7 +105,11 @@ class HelloScan_RequestParams {
      *
      */
     public function getQty() {
-        HelloScan_Utils::setDebug('getQty[before]', $_GET['qty']);
+        if(isset($_GET['qty'])) {
+            HelloScan_Utils::setDebug('getQty[before]', $_GET['qty']);
+        } else {
+            HelloScan_Utils::setDebug('getQty[before]', 'no');
+        }
         if(!empty($_GET['qty']) && is_numeric($_GET['qty'])) {
             HelloScan_Utils::setDebug('getQty[after]', trim(htmlspecialchars($_GET['qty'])));
             return $this->qty = trim(htmlspecialchars($_GET['qty'])); 
@@ -112,7 +127,11 @@ class HelloScan_RequestParams {
      *
      */
     public function getAuthKey() {
-        HelloScan_Utils::setDebug('getAuthKey[before]', $_GET['authkey']);
+        if(isset($_GET['authkey'])) {
+            HelloScan_Utils::setDebug('getAuthKey[before]', $_GET['authkey']);
+        } else {
+            HelloScan_Utils::setDebug('getAuthKey[before]', 'no');
+        }
         if(!empty($_GET['authkey'])) {
             HelloScan_Utils::setDebug('getAuthKey[after]', trim(htmlspecialchars($_GET['authkey'])));
             return $this->authkey = trim(htmlspecialchars($_GET['authkey'])); 
