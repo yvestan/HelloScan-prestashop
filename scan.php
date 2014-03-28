@@ -12,10 +12,6 @@
 * @link http://helloscan.mobi
 * @license MIT Licence
 */
-  error_reporting(E_ALL);//
-    ini_set("display_errors",1);
-      ini_set("log_errors",1);
-
 
 // config & init PrestaShop
 include(dirname(__FILE__).'/../../config/config.inc.php');
@@ -23,9 +19,12 @@ include_once(dirname(__FILE__).'/../../init.php');
 
 // debug ?
 define('HELLOSCAN_DEBUG', false);
-  error_reporting(E_ALL);//
+
+if(HELLOSCAN_DEBUG) {
+    error_reporting(E_ALL);//
     ini_set("display_errors",1);
-      ini_set("log_errors",1);
+    ini_set("log_errors",1);
+}
 
 // get params from helloscan request
 class HelloScan_RequestParams {
